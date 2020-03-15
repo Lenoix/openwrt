@@ -11,7 +11,7 @@ name: Merge-upstream
 on:
   push:
     branches: 
-      - master
+      - dev-19.07
   schedule:
     - cron: 30 30 * * *
 
@@ -23,9 +23,9 @@ jobs:
     steps:
 
     - name: Checkout
-      uses: actions/checkout@master
+      uses: actions/checkout@dev-19.07
       with:
-        ref: master
+        ref: dev-19.07
         fetch-depth: 0
         lfs: true
 
