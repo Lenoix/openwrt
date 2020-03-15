@@ -14,7 +14,7 @@ on:
     #branches: 
       #- dev-19.07
   # schedule:
-  #   - cron: 0 20 * * *
+  #   - cron: 3 50 * * *
   # release:
   #   types: [published]
 
