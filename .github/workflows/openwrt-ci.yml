@@ -1,0 +1,489 @@
+#
+# This is free software, lisence use MIT.
+# 
+# Copyright (C) 2019 P3TERX <https://p3terx.com>
+# Copyright (C) 2019 KFERMercer <KFER.Mercer@gmail.com>
+# 
+# <https://github.com/KFERMercer/OpenWrt-CI>
+#
+
+name: OpenWrt-CI
+
+on:
+  push:
+    branches: 
+      - master
+  # schedule:
+  #   - cron: 0 20 * * *
+  # release:
+  #   types: [published]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@master
+        with:
+          ref: master
+
+      - name: Space cleanup
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          docker rmi `docker images -q`
+          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/apt/sources.list.d
+          sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
+          sudo -E apt-get update
+          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler
+          sudo -E apt-get -y autoremove --purge
+          sudo -E apt-get clean
+          # sudo mkdir -p -m 777 /mnt/openwrt/bin /mnt/openwrt/build_dir/host /mnt/openwrt/build_dir/hostpkg /mnt/openwrt/dl /mnt/openwrt/feeds /mnt/openwrt/staging_dir
+          # ln -s /mnt/openwrt/bin ./bin
+          # mkdir -p ./build_dir/host && ln -s /mnt/openwrt/build_dir/host ./build_dir/host
+          # mkdir -p ./build_dir/host && ln -s /mnt/openwrt/build_dir/hostpkg ./build_dir/hostpkg
+          # ln -s /mnt/openwrt/dl ./dl
+          # ln -s /mnt/openwrt/feeds ./feeds
+          # ln -s /mnt/openwrt/staging_dir ./staging_dir
+          df -h
+      - name: Update feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+      - name: Generate configuration file
+        run: |
+          rm -f ./.config*
+          touch ./.config
+          #
+          # ========================固件定制部分========================
+          # 
+          # 
+          # 如果不对本区块做出任何编辑, 则生成默认配置固件. 
+          # 
+          # 以下为定制化固件选项和说明:
+          #
+          #
+          # 有些插件/选项是默认开启的, 如果想要关闭, 请参照以下示例进行编写:
+          # 
+          #          =========================================
+          #         |  # 取消编译VMware镜像:                   |
+          #         |  cat >> .config <<EOF                   |
+          #         |  # CONFIG_VMDK_IMAGES is not set        |
+          #         |  EOF                                    |
+          #          =========================================
+          #
+          # 
+          # 以下是一些提前准备好的一些插件选项.
+          # 直接取消注释相应代码块即可应用. 不要取消注释代码块上的汉字说明.
+          # 如果不需要代码块里的某一项配置, 只需要删除相应行.
+          #
+          # 如果需要其他插件, 请按照示例自行添加.
+          # 注意, 只需添加依赖链顶端的包. 如果你需要插件 A, 同时 A 依赖 B, 即只需要添加 A.
+          # 
+          # 无论你想要对固件进行怎样的定制, 都需要且只需要修改 EOF 回环内的内容.
+          # 
+          cat >> .config <<EOF
+          CONFIG_TARGET_brcm2708=y
+          CONFIG_TARGET_brcm2708_bcm2710=y
+          CONFIG_TARGET_brcm2708_bcm2710_DEVICE_rpi-3=y
+          CONFIG_ARIA2_BITTORRENT=y
+          CONFIG_ARIA2_NOXML=y
+          CONFIG_ARIA2_OPENSSL=y
+          CONFIG_ARIA2_WEBSOCKET=y
+          CONFIG_LIBCURL_COOKIES=y
+          CONFIG_LIBCURL_FILE=y
+          CONFIG_LIBCURL_FTP=y
+          CONFIG_LIBCURL_HTTP=y
+          CONFIG_LIBCURL_MBEDTLS=y
+          CONFIG_LIBCURL_NO_SMB="!"
+          CONFIG_LIBCURL_PROXY=y
+          CONFIG_LIBSODIUM_MINIMAL=y
+          CONFIG_MJPG_STREAMER_INPUT_UVC=y
+          CONFIG_MJPG_STREAMER_OUTPUT_HTTP=y
+          CONFIG_NGINX_HEADERS_MORE=y
+          CONFIG_NGINX_HTTP_ACCESS=y
+          CONFIG_NGINX_HTTP_AUTH_BASIC=y
+          CONFIG_NGINX_HTTP_AUTOINDEX=y
+          CONFIG_NGINX_HTTP_BROWSER=y
+          CONFIG_NGINX_HTTP_CACHE=y
+          CONFIG_NGINX_HTTP_CHARSET=y
+          CONFIG_NGINX_HTTP_EMPTY_GIF=y
+          CONFIG_NGINX_HTTP_FASTCGI=y
+          CONFIG_NGINX_HTTP_GEO=y
+          CONFIG_NGINX_HTTP_GZIP=y
+          CONFIG_NGINX_HTTP_LIMIT_CONN=y
+          CONFIG_NGINX_HTTP_LIMIT_REQ=y
+          CONFIG_NGINX_HTTP_MAP=y
+          CONFIG_NGINX_HTTP_MEMCACHED=y
+          CONFIG_NGINX_HTTP_PROXY=y
+          CONFIG_NGINX_HTTP_REFERER=y
+          CONFIG_NGINX_HTTP_REWRITE=y
+          CONFIG_NGINX_HTTP_SCGI=y
+          CONFIG_NGINX_HTTP_SPLIT_CLIENTS=y
+          CONFIG_NGINX_HTTP_SSI=y
+          CONFIG_NGINX_HTTP_UPSTREAM_HASH=y
+          CONFIG_NGINX_HTTP_UPSTREAM_IP_HASH=y
+          CONFIG_NGINX_HTTP_UPSTREAM_KEEPALIVE=y
+          CONFIG_NGINX_HTTP_UPSTREAM_LEAST_CONN=y
+          CONFIG_NGINX_HTTP_USERID=y
+          CONFIG_NGINX_HTTP_UWSGI=y
+          CONFIG_NGINX_NAXSI=y
+          CONFIG_NGINX_PCRE=y
+          CONFIG_NGINX_UBUS=y
+          CONFIG_OPENVPN_openssl_ENABLE_DEF_AUTH=y
+          CONFIG_OPENVPN_openssl_ENABLE_FRAGMENT=y
+          CONFIG_OPENVPN_openssl_ENABLE_LZ4=y
+          CONFIG_OPENVPN_openssl_ENABLE_LZO=y
+          CONFIG_OPENVPN_openssl_ENABLE_MULTIHOME=y
+          CONFIG_OPENVPN_openssl_ENABLE_PF=y
+          CONFIG_OPENVPN_openssl_ENABLE_PORT_SHARE=y
+          CONFIG_OPENVPN_openssl_ENABLE_SERVER=y
+          CONFIG_OPENVPN_openssl_ENABLE_SMALL=y
+          CONFIG_PACKAGE_6in4=y
+          CONFIG_PACKAGE_SAMBA_MAX_DEBUG_LEVEL=-1
+          CONFIG_PACKAGE_TAR_BZIP2=y
+          CONFIG_PACKAGE_TAR_GZIP=y
+          CONFIG_PACKAGE_TAR_XZ=y
+          CONFIG_PACKAGE_UnblockNeteaseMusicGo=y
+          CONFIG_PACKAGE_acme=y
+          CONFIG_PACKAGE_adbyby=y
+          CONFIG_PACKAGE_amule=y
+          CONFIG_PACKAGE_aria2=y
+          CONFIG_PACKAGE_baidupcs-web=m
+          CONFIG_PACKAGE_bash=y
+          CONFIG_PACKAGE_boost=y
+          CONFIG_PACKAGE_boost-chrono=y
+          CONFIG_PACKAGE_boost-date_time=y
+          CONFIG_PACKAGE_boost-program_options=y
+          CONFIG_PACKAGE_boost-random=y
+          CONFIG_PACKAGE_boost-system=y
+          CONFIG_PACKAGE_brook=y
+          CONFIG_PACKAGE_bzip2=y
+          CONFIG_PACKAGE_ca-bundle=y
+          CONFIG_PACKAGE_curl=y
+          CONFIG_PACKAGE_dnscrypt-proxy=m
+          CONFIG_PACKAGE_dnscrypt-proxy-resolvers=m
+          CONFIG_PACKAGE_dnscrypt-proxy2=m
+          CONFIG_PACKAGE_dnsforwarder=m
+          CONFIG_PACKAGE_flock=y
+          CONFIG_PACKAGE_frpc=y
+          CONFIG_PACKAGE_fwknopd=y
+          CONFIG_PACKAGE_getopt=y
+          CONFIG_PACKAGE_hd-idle=y
+          CONFIG_PACKAGE_https-dns-proxy=y
+          CONFIG_PACKAGE_ip-full=y
+          CONFIG_PACKAGE_iptables-mod-conntrack-extra=y
+          CONFIG_PACKAGE_iptables-mod-ipopt=y
+          CONFIG_PACKAGE_ipv6helper=y
+          CONFIG_PACKAGE_kcptun-client=y
+          CONFIG_PACKAGE_kmod-ifb=y
+          CONFIG_PACKAGE_kmod-ipt-conntrack-extra=y
+          CONFIG_PACKAGE_kmod-ipt-ipopt=y
+          CONFIG_PACKAGE_kmod-ipt-nat6=y
+          CONFIG_PACKAGE_kmod-ipt-raw=y
+          CONFIG_PACKAGE_kmod-iptunnel4=y
+          CONFIG_PACKAGE_kmod-nf-nat6=y
+          CONFIG_PACKAGE_kmod-sched-cake=y
+          CONFIG_PACKAGE_kmod-sched-connmark=y
+          CONFIG_PACKAGE_kmod-sched-core=y
+          CONFIG_PACKAGE_kmod-sit=y
+          CONFIG_PACKAGE_kmod-tun=y
+          CONFIG_PACKAGE_kmod-usb-printer=y
+          CONFIG_PACKAGE_libbfd=y
+          CONFIG_PACKAGE_libbz2=y
+          CONFIG_PACKAGE_libcap=y
+          CONFIG_PACKAGE_libcares=y
+          CONFIG_PACKAGE_libcurl=y
+          CONFIG_PACKAGE_libdb47=y
+          CONFIG_PACKAGE_libdouble-conversion=y
+          CONFIG_PACKAGE_libelf=y
+          CONFIG_PACKAGE_libev=y
+          CONFIG_PACKAGE_libevent2=y
+          CONFIG_PACKAGE_libexif=m
+          CONFIG_PACKAGE_libexpat=y
+          CONFIG_PACKAGE_libffi=y
+          CONFIG_PACKAGE_libffmpeg-audio-dec=m
+          CONFIG_PACKAGE_libfko=y
+          CONFIG_PACKAGE_libflac=m
+          CONFIG_PACKAGE_libfreetype=y
+          CONFIG_PACKAGE_libgdbm=y
+          CONFIG_PACKAGE_libiconv-full=y
+          CONFIG_PACKAGE_libid3tag=m
+          CONFIG_PACKAGE_libjpeg=y
+          CONFIG_PACKAGE_liblxc=y
+          CONFIG_PACKAGE_liblzma=y
+          CONFIG_PACKAGE_liblzo=y
+          CONFIG_PACKAGE_libminiupnpc=y
+          CONFIG_PACKAGE_libnatpmp=y
+          CONFIG_PACKAGE_libogg=m
+          CONFIG_PACKAGE_libopenssl-conf=y
+          CONFIG_PACKAGE_libpcap=y
+          CONFIG_PACKAGE_libpcre2-16=y
+          CONFIG_PACKAGE_libpng=y
+          CONFIG_PACKAGE_libpopt=y
+          CONFIG_PACKAGE_libqrencode=y
+          CONFIG_PACKAGE_libsodium=y
+          CONFIG_PACKAGE_libsqlite3=y
+          CONFIG_PACKAGE_libstdcpp=y
+          CONFIG_PACKAGE_libupnp=y
+          CONFIG_PACKAGE_libvorbis=m
+          CONFIG_PACKAGE_libwxbase=y
+          CONFIG_PACKAGE_libxml2=y
+          CONFIG_PACKAGE_luci-app-adbyby-plus=y
+          CONFIG_PACKAGE_luci-app-adguardhome=y
+          CONFIG_PACKAGE_luci-app-amule=y
+          CONFIG_PACKAGE_luci-app-aria2=y
+          CONFIG_PACKAGE_luci-app-baidupcs-web=m
+          CONFIG_PACKAGE_luci-app-dnscrypt-proxy=m
+          CONFIG_PACKAGE_luci-app-dnsforwarder=m
+          CONFIG_PACKAGE_luci-app-filebrowser=y
+          CONFIG_PACKAGE_luci-app-filetransfer=y
+          CONFIG_PACKAGE_luci-app-frpc=y
+          CONFIG_PACKAGE_luci-app-fwknopd=y
+          CONFIG_PACKAGE_luci-app-guest-wifi=y
+          CONFIG_PACKAGE_luci-app-hd-idle=y
+          CONFIG_PACKAGE_luci-app-https-dns-proxy=m
+          CONFIG_PACKAGE_luci-app-kcptun=y
+          CONFIG_PACKAGE_luci-app-kodexplorer=y
+          CONFIG_PACKAGE_luci-app-lxc=y
+          CONFIG_PACKAGE_luci-app-meshwizard=m
+          CONFIG_PACKAGE_luci-app-minidlna=m
+          CONFIG_PACKAGE_luci-app-mjpg-streamer=m
+          CONFIG_PACKAGE_luci-app-mwan3=y
+          CONFIG_PACKAGE_luci-app-mwan3helper=y
+          CONFIG_PACKAGE_luci-app-netdata=y
+          CONFIG_PACKAGE_luci-app-nlbwmon=y
+          CONFIG_PACKAGE_luci-app-nps=y
+          CONFIG_PACKAGE_luci-app-ntpc=y
+          CONFIG_PACKAGE_luci-app-openvpn=y
+          CONFIG_PACKAGE_luci-app-openvpn-server=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Brook=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_ShadowsocksR_socks=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks_socks=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Trojan=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_kcptun=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_simple-obfs=y
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_v2ray-plugin=y
+          CONFIG_PACKAGE_luci-app-privoxy=m
+          CONFIG_PACKAGE_luci-app-qbittorrent=y
+          CONFIG_PACKAGE_luci-app-qos=y
+          CONFIG_PACKAGE_luci-app-samba=y
+          CONFIG_PACKAGE_luci-app-smartdns=y
+          CONFIG_PACKAGE_luci-app-softethervpn=y
+          CONFIG_PACKAGE_luci-app-sqm=y
+          CONFIG_PACKAGE_luci-app-ssr-libev-server=m
+          CONFIG_PACKAGE_luci-app-ssr-python-pro-server=m
+          CONFIG_PACKAGE_luci-app-transmission=y
+          CONFIG_PACKAGE_luci-app-travelmate=y
+          CONFIG_PACKAGE_luci-app-trojan-server=y
+          CONFIG_PACKAGE_luci-app-unblockmusic=y
+          CONFIG_PACKAGE_luci-app-upnp=y
+          CONFIG_PACKAGE_luci-app-usb-printer=y
+          CONFIG_PACKAGE_luci-app-v2ray-server=y
+          CONFIG_PACKAGE_luci-app-verysync=m
+          CONFIG_PACKAGE_luci-app-watchcat=y
+          CONFIG_PACKAGE_luci-app-wifischedule=y
+          CONFIG_PACKAGE_luci-app-wrtbwmon=y
+          CONFIG_PACKAGE_luci-app-zerotier=y
+          CONFIG_PACKAGE_luci-i18n-adbyby-plus-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-amule-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-aria2-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-dnsforwarder-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-filebrowser-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-filetransfer-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-guest-wifi-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-hd-idle-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-kcptun-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-kodexplorer-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-meshwizard-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-minidlna-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-mjpg-streamer-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-mwan3-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-mwan3helper-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-netdata-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-nlbwmon-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-ntpc-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-openvpn-server-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-openvpn-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-privoxy-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-qbittorrent-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-qos-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-samba-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-smartdns-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-softethervpn-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-ssr-libev-server-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-ssr-python-pro-server-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-transmission-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-trojan-server-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-unblockmusic-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-upnp-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-usb-printer-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-v2ray-server-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-verysync-zh-cn=m
+          CONFIG_PACKAGE_luci-i18n-watchcat-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-wifischedule-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-wrtbwmon-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
+          CONFIG_PACKAGE_luci-lib-docker=y
+          CONFIG_PACKAGE_luci-lib-fs=y
+          CONFIG_PACKAGE_luci-lib-httpprotoutils=y
+          CONFIG_PACKAGE_luci-lib-json=y
+          CONFIG_PACKAGE_luci-theme-argon-dark-mod=y
+          CONFIG_PACKAGE_luci-theme-argon-light-mod=y
+          CONFIG_PACKAGE_luci-theme-freifunk-generic=y
+          CONFIG_PACKAGE_luci-theme-material=y
+          CONFIG_PACKAGE_luci-theme-openwrt=y
+          CONFIG_PACKAGE_lxc=y
+          CONFIG_PACKAGE_lxc-attach=y
+          CONFIG_PACKAGE_lxc-common=y
+          CONFIG_PACKAGE_lxc-configs=y
+          CONFIG_PACKAGE_lxc-console=y
+          CONFIG_PACKAGE_lxc-create=y
+          CONFIG_PACKAGE_lxc-hooks=y
+          CONFIG_PACKAGE_lxc-templates=y
+          CONFIG_PACKAGE_meshwizard=m
+          CONFIG_PACKAGE_minidlna=m
+          CONFIG_PACKAGE_miniupnpd=y
+          CONFIG_PACKAGE_mjpg-streamer=m
+          CONFIG_PACKAGE_mwan3=y
+          CONFIG_PACKAGE_netdata=y
+          CONFIG_PACKAGE_nginx=y
+          CONFIG_PACKAGE_nlbwmon=y
+          CONFIG_PACKAGE_npc=y
+          CONFIG_PACKAGE_ntpclient=y
+          CONFIG_PACKAGE_openssl-util=y
+          CONFIG_PACKAGE_openvpn-easy-rsa=y
+          CONFIG_PACKAGE_openvpn-openssl=y
+          CONFIG_PACKAGE_p910nd=y
+          CONFIG_PACKAGE_php7=y
+          CONFIG_PACKAGE_php7-fpm=y
+          CONFIG_PACKAGE_php7-mod-curl=y
+          CONFIG_PACKAGE_php7-mod-gd=y
+          CONFIG_PACKAGE_php7-mod-iconv=y
+          CONFIG_PACKAGE_php7-mod-json=y
+          CONFIG_PACKAGE_php7-mod-mbstring=y
+          CONFIG_PACKAGE_php7-mod-opcache=y
+          CONFIG_PACKAGE_php7-mod-session=y
+          CONFIG_PACKAGE_php7-mod-zip=y
+          CONFIG_PACKAGE_privoxy=m
+          CONFIG_PACKAGE_python=y
+          CONFIG_PACKAGE_python-base=y
+          CONFIG_PACKAGE_python-codecs=y
+          CONFIG_PACKAGE_python-compiler=y
+          CONFIG_PACKAGE_python-ctypes=y
+          CONFIG_PACKAGE_python-db=y
+          CONFIG_PACKAGE_python-decimal=y
+          CONFIG_PACKAGE_python-distutils=y
+          CONFIG_PACKAGE_python-email=y
+          CONFIG_PACKAGE_python-gdbm=y
+          CONFIG_PACKAGE_python-light=y
+          CONFIG_PACKAGE_python-logging=y
+          CONFIG_PACKAGE_python-multiprocessing=y
+          CONFIG_PACKAGE_python-ncurses=y
+          CONFIG_PACKAGE_python-openssl=y
+          CONFIG_PACKAGE_python-pydoc=y
+          CONFIG_PACKAGE_python-sqlite3=y
+          CONFIG_PACKAGE_python-unittest=y
+          CONFIG_PACKAGE_python-xml=y
+          CONFIG_PACKAGE_qBittorrent=y
+          CONFIG_PACKAGE_qos-scripts=y
+          CONFIG_PACKAGE_qrencode=y
+          CONFIG_PACKAGE_qt5-core=y
+          CONFIG_PACKAGE_qt5-network=y
+          CONFIG_PACKAGE_qt5-xml=y
+          CONFIG_PACKAGE_rblibtorrent=y
+          CONFIG_PACKAGE_rpcd-mod-lxc=y
+          CONFIG_PACKAGE_rsync=y
+          CONFIG_PACKAGE_rsyncd=y
+          CONFIG_PACKAGE_samba36-server=y
+          CONFIG_PACKAGE_shadowsocks-libev-config=y
+          CONFIG_PACKAGE_shadowsocks-libev-ss-local=y
+          CONFIG_PACKAGE_shadowsocks-libev-ss-redir=y
+          CONFIG_PACKAGE_shadowsocksr-libev-server=m
+          CONFIG_PACKAGE_shadowsocksr-libev-ssr-local=y
+          CONFIG_PACKAGE_simple-obfs=y
+          CONFIG_PACKAGE_smartdns=y
+          CONFIG_PACKAGE_socat=y
+          CONFIG_PACKAGE_softethervpn5-bridge=y
+          CONFIG_PACKAGE_softethervpn5-client=y
+          CONFIG_PACKAGE_softethervpn5-libs=y
+          CONFIG_PACKAGE_softethervpn5-server=y
+          CONFIG_PACKAGE_sqm-scripts=y
+          CONFIG_PACKAGE_tar=y
+          CONFIG_PACKAGE_tc=y
+          CONFIG_PACKAGE_tor=y
+          CONFIG_PACKAGE_tor-fw-helper=y
+          CONFIG_PACKAGE_tor-gencert=y
+          CONFIG_PACKAGE_tor-geoip=y
+          CONFIG_PACKAGE_tor-resolve=y
+          CONFIG_PACKAGE_travelmate=y
+          CONFIG_PACKAGE_trojan=y
+          CONFIG_PACKAGE_v2ray-plugin=y
+          CONFIG_PACKAGE_verysync=y
+          CONFIG_PACKAGE_watchcat=y
+          CONFIG_PACKAGE_wifischedule=y
+          CONFIG_PACKAGE_xz=y
+          CONFIG_PACKAGE_xz-utils=y
+          CONFIG_PACKAGE_zerotier=y
+          CONFIG_PACKAGE_zoneinfo-asia=y
+          CONFIG_PHP7_LIBFREETYPE=y
+          CONFIG_RSYNC_zlib=y
+          CONFIG_SQLITE3_DYNAMIC_EXTENSIONS=y
+          CONFIG_SQLITE3_FTS3=y
+          CONFIG_SQLITE3_FTS4=y
+          CONFIG_SQLITE3_FTS5=y
+          CONFIG_SQLITE3_JSON1=y
+          CONFIG_SQLITE3_RTREE=y
+          CONFIG_TARGET_EXT4_BLOCKSIZE=4096
+          CONFIG_TARGET_EXT4_BLOCKSIZE_4K=y
+          CONFIG_TARGET_EXT4_RESERVED_PCT=0
+          CONFIG_TARGET_IMAGES_GZIP=y
+          CONFIG_TARGET_KERNEL_PARTSIZE=64
+          CONFIG_TARGET_ROOTFS_EXT4FS=y
+          CONFIG_TARGET_ROOTFS_PARTSIZE=512
+          # CONFIG_UnblockNeteaseMusic_NodeJS is not set
+          CONFIG_boost-compile-visibility-hidden=y
+          CONFIG_boost-runtime-shared=y
+          CONFIG_boost-static-and-shared-libs=y
+          CONFIG_boost-variant-release=y
+          CONFIG_PACKAGE_ip-tiny=y 
+          EOF
+          # 取消编译VMware镜像以及镜像填充 (不要删除被缩进的注释符号):
+          # cat >> .config <<EOF
+          # # CONFIG_TARGET_IMAGES_PAD is not set
+          # # CONFIG_VMDK_IMAGES is not set
+          # EOF
+          # 
+          # ========================固件定制部分结束========================
+          # 
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
+      - name: Make download
+        run: |
+          make download -j8
+          find ./dl/ -size -1024c -exec rm -f {} \;
+          df -h
+      - name: Compile firmware
+        run: |
+          make -j$(nproc) || make -j1 V=s
+          echo "======================="
+          echo "Space usage:"
+          echo "======================="
+          df -h
+          echo "======================="
+          du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
+          du -h --max-depth=1 ./build_dir
+          du -h --max-depth=1 ./bin
+      - name: Prepare artifact
+        run: find ./bin/targets/ -type d -name "packages" | xargs rm -rf {}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: OpenWrt firmware
+          path: ./bin/targets/
